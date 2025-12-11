@@ -1,0 +1,18 @@
+[Unit]
+Description=Rust Task Manager Service
+After=network.target
+
+[Service]
+Type=simple
+User=jeblqr
+WorkingDirectory=/home/jeblqr/data1/projects/task-mgr/server
+# Assumes 'install.sh' builds release binary or we run cargo run for dev-like prod
+# Ideally point to release binary
+ExecStart=/home/jeblqr/data1/projects/task-mgr/server/target/release/server
+Restart=always
+RestartSec=3
+Environment=RUST_LOG=info
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target
