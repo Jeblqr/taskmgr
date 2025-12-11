@@ -21,19 +21,36 @@ A high-performance, full-stack Task Management application for Linux servers. Fe
 - `rust` (stable) & `cargo`
 - `gcc` & `libpam0g-dev`
 
-### Quick Install (Root Required)
-The provided script builds the application and installs it as a systemd service.
+### Installation
 
+This application runs directly from the source directory as a Systemd service.
+
+**1. Build Frontend**
 ```bash
-chmod +x install.sh
-sudo ./install.sh
+cd web
+npm install
+npm run build
+cd ..
 ```
 
-This will:
-1. Build the Frontend (`web`) and Backend (`server`).
-2. Install server binary to `/opt/task-mgr/server`.
-3. Install frontend assets to `/opt/task-mgr/web`.
-4. Install and start `task-mgr.service`.
+**2. Build Backend**
+```bash
+cd server
+cargo build --release
+cd ..
+```
+
+**3. Configure & Install Service**
+Edit `task-mgr.service` to match your project path if needed (default: `/home/jeblqr/data1/projects/task-mgr`), then install it:
+
+```bash
+sudo cp task-mgr.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable task-mgr
+sudo systemctl start task-mgr
+```
+
+The service will run as root (required for PAM Auth) and serve the app on port `3000`.
 
 ### Configuration
 The service runs on port `3000` by default.

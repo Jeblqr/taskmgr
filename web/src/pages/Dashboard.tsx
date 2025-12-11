@@ -20,7 +20,8 @@ export default function Dashboard() {
 
     useEffect(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = import.meta.env.DEV ? "localhost:3000" : window.location.host;
+        // Always use window.location.host. Vite proxy will forward to 3000 in Dev.
+        const host = window.location.host;
         const ws = new WebSocket(`${protocol}//${host}/api/stats`);
         
         ws.onmessage = (ev) => {

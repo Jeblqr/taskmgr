@@ -18,6 +18,7 @@ use crate::auth::{AuthUser, authenticate_user, LoginPayload};
 
 use crate::monitor::SystemMetrics;
 use tokio::sync::broadcast;
+use users::os::unix::UserExt;
 
 pub struct AppState {
     pub task_manager: Arc<TaskManager>,
@@ -329,8 +330,16 @@ struct LsQuery {
     path: String,
 }
 
-async fn fs_ls(Query(q): axum::extract::Query<LsQuery>) -> impl IntoResponse {
-    match list_directory(&q.path) {
+async fn fs_ls(
+    AuthUser { username, .. }: AuthUser,
+    Query(q): axum::extract::Query<LsQuery>
+) -> impl IntoResponse {
+    let user_home = match users::get_user_by_name(&username) {
+        Some(u) => u.home_dir().to_path_buf(),
+        None => return (StatusCode::FORBIDDEN, "User not found").into_response(),
+    };
+
+    match list_directory(&q.path, &user_home) {
         Ok(entries) => Json(entries).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -341,8 +350,16 @@ struct ReadQuery {
     path: String,
 }
 
-async fn fs_read(Query(q): axum::extract::Query<ReadQuery>) -> impl IntoResponse {
-    match read_file(&q.path) {
+async fn fs_read(
+    AuthUser { username, .. }: AuthUser,
+    Query(q): axum::extract::Query<ReadQuery>
+) -> impl IntoResponse {
+    let user_home = match users::get_user_by_name(&username) {
+        Some(u) => u.home_dir().to_path_buf(),
+        None => return (StatusCode::FORBIDDEN, "User not found").into_response(),
+    };
+
+    match read_file(&q.path, &user_home) {
         Ok(content) => content.into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }

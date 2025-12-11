@@ -12,70 +12,77 @@ pub struct FileEntry {
     pub modified: u64,
 }
 
-pub fn resolve_safe_path(input_path: &str) -> Result<PathBuf, std::io::Error> {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let root = Path::new(&home).canonicalize()?;
+pub fn resolve_safe_path(input_path: &str, user_home: &Path) -> Result<PathBuf, std::io::Error> {
+    // Virtual Root Logic:
+    // The frontend sees "/" as the root.
+    // We map "/" -> user_home.
+    // "/foo" -> user_home/foo.
     
-    // Treat input as relative to root, even if it starts with /
+    // 1. Strip leading "/" from input to make it relative
     let relative_path = input_path.trim_start_matches('/');
+    
+    // 2. Join with user_home
     let target = if relative_path.is_empty() {
-        root.clone()
+        user_home.to_path_buf()
     } else {
-        root.join(relative_path)
+        user_home.join(relative_path)
     };
 
-    // Canonicalize to resolve .. and symlinks
-    let canonical = target.canonicalize().map_err(|e| {
-        // If file doesn't exist, we can't canonicalize, but for ls/read it should exist.
-        // For creation we might need parent check. For now assume read-only/existing ops.
-        e
-    })?;
+    // 3. Canonicalize to resolve symlinks and ".."
+    // Note: If target doesn't exist, canonicalize fails. 
+    // This provides "Path not found" check implicitly.
+    let canonical = target.canonicalize()?;
 
-    if canonical.starts_with(&root) {
+    // 4. Sandbox Check: Ensure it is still inside user_home
+    // Use canonical user_home to compare
+    let canonical_home = user_home.canonicalize().unwrap_or(user_home.to_path_buf());
+    
+    if canonical.starts_with(&canonical_home) {
         Ok(canonical)
     } else {
-        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Path traversal denied: Access outside home directory is forbidden."))
+        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Access Denied: Path is outside your home directory."))
     }
 }
 
-pub fn list_directory(path: &str) -> Result<Vec<FileEntry>, std::io::Error> {
-    let msg_path = if path.starts_with('/') { path } else { "/" }; // Display path
-    let safe_path = resolve_safe_path(path)?;
+pub fn list_directory(path: &str, user_home: &Path) -> Result<Vec<FileEntry>, std::io::Error> {
+    // If path is empty, default to "/"
+    let input_path = if path.is_empty() { "/" } else { path };
+    let safe_path = resolve_safe_path(input_path, user_home)?;
     
     let mut entries = Vec::new();
-    let dir = fs::read_dir(safe_path)?;
+    let dir = fs::read_dir(&safe_path)?;
 
     for entry in dir {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
-        let path_buf = entry.path();
-        
-        let modified = metadata.modified()
-            .unwrap_or(SystemTime::UNIX_EPOCH)
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        // Handle read errors gracefully for individual files
+        if let Ok(entry) = entry {
+            if let Ok(metadata) = entry.metadata() {
+                let modified = metadata.modified()
+                    .unwrap_or(SystemTime::UNIX_EPOCH)
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
 
-        // For frontend, we want the "virtual" path (relative to root)
-        // If we list /home/user/foo, and entry is /home/user/foo/bar,
-        // we want result path to be /foo/bar.
-        // Simple hack: Take the input path logic or just use name and let frontend build path.
-        // Frontend uses `entry.path` for navigation. So we must reconstruct virtual path.
-        
-        let name = entry.file_name().to_string_lossy().to_string();
-        let virtual_path = if msg_path == "/" {
-            format!("/{}", name)
-        } else {
-            format!("{}/{}", msg_path.trim_end_matches('/'), name)
-        };
+                let name = entry.file_name().to_string_lossy().to_string();
+                
+                // Virtual Path Construction:
+                // Input: /foo (virtual)
+                // Name: bar
+                // Result: /foo/bar
+                let virtual_path = if input_path == "/" {
+                    format!("/{}", name)
+                } else {
+                    format!("{}/{}", input_path.trim_end_matches('/'), name)
+                };
 
-        entries.push(FileEntry {
-            name,
-            path: virtual_path, 
-            is_dir: metadata.is_dir(),
-            size: metadata.len(),
-            modified,
-        });
+                entries.push(FileEntry {
+                    name,
+                    path: virtual_path, 
+                    is_dir: metadata.is_dir(),
+                    size: metadata.len(),
+                    modified,
+                });
+            }
+        }
     }
 
     entries.sort_by(|a, b| {
@@ -91,7 +98,7 @@ pub fn list_directory(path: &str) -> Result<Vec<FileEntry>, std::io::Error> {
     Ok(entries)
 }
 
-pub fn read_file(path: &str) -> Result<String, std::io::Error> {
-    let safe_path = resolve_safe_path(path)?;
+pub fn read_file(path: &str, user_home: &Path) -> Result<String, std::io::Error> {
+    let safe_path = resolve_safe_path(path, user_home)?;
     fs::read_to_string(safe_path)
 }

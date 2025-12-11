@@ -5,14 +5,17 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/task-mgr
-ExecStart=/opt/task-mgr/server/task-mgr-server
+# Update this path to your project location
+WorkingDirectory=/home/jeblqr/data1/projects/task-mgr/server
+# Update this path to your compiled binary
+ExecStart=/home/jeblqr/data1/projects/task-mgr/target/release/server
 Restart=always
 RestartSec=3
 Environment=RUST_LOG=info
 Environment=PORT=3000
-Environment=WEB_ROOT=/opt/task-mgr/web
-Environment=DATABASE_URL=sqlite:///opt/task-mgr/tasks.db
+# Update this path to your web/dist folder
+Environment=WEB_ROOT=/home/jeblqr/data1/projects/task-mgr/web/dist
+Environment=DATABASE_URL=sqlite:///home/jeblqr/data1/projects/task-mgr/server/data/tasks.db
 
 [Install]
 WantedBy=multi-user.target
