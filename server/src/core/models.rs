@@ -17,6 +17,7 @@ pub enum TaskStatus {
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct Task {
     pub id: String,
+    pub owner: String, // New field
     pub name: String,
     pub command: String,
     pub args: String, // JSON array of strings

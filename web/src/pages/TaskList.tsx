@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetcher } from "../lib/api";
-import { Activity, Terminal, Clock, AlertCircle } from "lucide-react";
+import { Activity, Terminal, Clock } from "lucide-react";
 import clsx from "clsx";
 
 interface Task {
@@ -26,65 +26,66 @@ export default function TaskList() {
         return () => clearInterval(interval);
     }, []);
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "Running": return "text-emerald-400";
-            case "Completed": return "text-blue-400";
-            case "Failed": return "text-red-400";
-            default: return "text-gray-400";
-        }
-    };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-7xl mx-auto animate-fade-in">
             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white tracking-tight">Active Tasks</h2>
-                <Link to="/tasks/new" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                <div>
+                     <h2 className="text-3xl font-bold text-white tracking-tight">Active Tasks</h2>
+                     <p className="text-gray-400">Manage and monitor your running processes.</p>
+                </div>
+                <Link to="/tasks/new" className="btn-primary">
                     + New Task
                 </Link>
             </div>
 
             {loading ? (
-                <div className="text-gray-500">Loading tasks...</div>
+                <div className="text-gray-500 flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                    Loading tasks...
+                </div>
             ) : (
                 <div className="grid gap-4">
                     {tasks.map((task) => (
                         <Link key={task.id} to={`/tasks/${task.id}`} className="block group">
-                            <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 transition-all group-hover:border-gray-700/50 group-hover:bg-gray-900/50">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={clsx("p-2 rounded-full bg-gray-800/50", getStatusColor(task.status))}>
-                                            <Terminal size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-semibold text-gray-200 group-hover:text-white">{task.name}</h3>
-                                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                                                <span className="flex items-center gap-1">
-                                                    <Activity size={14} /> {task.env_type}
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <Clock size={14} /> {new Date(task.created_at).toLocaleString()}
-                                                </span>
-                                                {task.pid && <span className="font-mono text-xs bg-gray-800 px-2 py-0.5 rounded">PID: {task.pid}</span>}
-                                            </div>
+                            <div className="glass-card p-6 flex items-center justify-between group-hover:bg-white/5 transition-all">
+                                <div className="flex items-center gap-5">
+                                    <div className={clsx("p-3 rounded-xl transition-colors", 
+                                        task.status === "Running" ? "bg-emerald-500/10 text-emerald-400" : "bg-gray-800 text-gray-400"
+                                    )}>
+                                        <Terminal size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">{task.name}</h3>
+                                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1.5">
+                                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
+                                                <Activity size={14} /> {task.env_type}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock size={14} /> {new Date(task.created_at).toLocaleString()}
+                                            </span>
+                                            {task.pid && <span className="font-mono text-xs text-gray-600">PID: {task.pid}</span>}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className={clsx("px-3 py-1 rounded-full text-xs font-medium border", 
-                                            task.status === "Running" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : 
-                                            task.status === "Failed" ? "border-red-500/30 bg-red-500/10 text-red-400" :
-                                            "border-gray-700 bg-gray-800 text-gray-400"
-                                        )}>
-                                            {task.status}
-                                        </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className={clsx("px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider", 
+                                        task.status === "Running" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]" : 
+                                        task.status === "Failed" ? "border-red-500/20 bg-red-500/10 text-red-500" :
+                                        "border-gray-700 bg-gray-800 text-gray-400"
+                                    )}>
+                                        {task.status}
                                     </div>
                                 </div>
                             </div>
                         </Link>
                     ))}
                     {tasks.length === 0 && (
-                        <div className="text-center py-12 text-gray-600">
-                            No tasks found. Start one to get going.
+                        <div className="text-center py-20 text-gray-600 glass-card">
+                            <div className="mb-4 text-gray-700">
+                                <Terminal size={48} className="mx-auto opacity-20" />
+                            </div>
+                            No active tasks found. <br />Start a new process to get started.
                         </div>
                     )}
                 </div>

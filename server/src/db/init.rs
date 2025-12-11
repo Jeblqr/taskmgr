@@ -26,6 +26,7 @@ pub async fn init_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
         r#"
         CREATE TABLE IF NOT EXISTS tasks (
             id TEXT PRIMARY KEY,
+            owner TEXT NOT NULL DEFAULT 'admin', -- Added owner column
             name TEXT NOT NULL,
             command TEXT NOT NULL,
             args TEXT NOT NULL,

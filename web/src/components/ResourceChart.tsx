@@ -10,9 +10,12 @@ interface ResourceChartProps {
 
 export default function ResourceChart({ data, dataKey, color, title, unit = "%" }: ResourceChartProps) {
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 h-64 min-w-[300px]">
-            <h3 className="text-gray-400 text-sm font-medium mb-4">{title}</h3>
-            <div className="h-48 w-full">
+        <div className="glass-card p-6 h-72 min-w-[300px]">
+            <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-6 flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                {title}
+            </h3>
+            <div className="h-56 w-full -ml-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />

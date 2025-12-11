@@ -6,12 +6,14 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::path::PathBuf;
 use tokio::sync::broadcast;
 
+mod auth;
 mod api;
 mod core;
 mod db;
 mod exec;
 mod fs;
 mod monitor;
+mod alerts;
 
 use crate::db::init::init_db;
 use crate::exec::TaskManager;

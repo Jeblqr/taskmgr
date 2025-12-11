@@ -1,5 +1,11 @@
-#!/bin/bash
-set -e
+# Check for root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root"
+  exit 1
+fi
+
+echo "Stpping existing service..."
+systemctl stop task-mgr || true
 
 echo "Building Frontend..."
 cd web
@@ -12,15 +18,31 @@ cd server
 cargo build --release
 cd ..
 
-echo "Setting up Systemd Service..."
-# Adjust path in service file if needed (already absolute in my generation, but for portability sed is better)
-# For now, assuming user will copy it or link it.
+echo "Installing to /opt/task-mgr..."
+mkdir -p /opt/task-mgr/server
+mkdir -p /opt/task-mgr/web
+mkdir -p /opt/task-mgr/data/logs
 
-# Copy service file (requires sudo usually, but script might be run as user then sudo cp)
-echo "To install systemd service:"
-echo "sudo cp task-mgr.service /etc/systemd/system/"
-echo "sudo systemctl daemon-reload"
-echo "sudo systemctl enable task-mgr"
-echo "sudo systemctl start task-mgr"
+# Copy Binaries
+cp server/target/release/server /opt/task-mgr/server/task-mgr-server
+chmod +x /opt/task-mgr/server/task-mgr-server
 
-echo "Build Complete."
+# Copy Web Assets
+cp -r web/dist/* /opt/task-mgr/web/
+
+# Setup DB (preserve if exists)
+if [ ! -f /opt/task-mgr/tasks.db ]; then
+    echo "Initializing Database..."
+    touch /opt/task-mgr/tasks.db
+fi
+
+# Install Service
+echo "Installing Systemd Service..."
+cp task-mgr.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable task-mgr
+systemctl start task-mgr
+
+echo "Installation Complete!"
+echo "Service status:"
+systemctl status task-mgr --no-pager

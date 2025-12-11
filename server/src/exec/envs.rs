@@ -1,8 +1,59 @@
 use std::path::PathBuf;
 use crate::core::models::Task;
 use anyhow::{Result, anyhow};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::process::Command;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CondaEnv {
+    pub name: Option<String>,
+    pub prefix: String,
+}
+
+#[derive(Deserialize)]
+struct CondaEnvListOutput {
+    envs: Vec<String>,
+}
+
+pub fn list_conda_envs() -> Vec<CondaEnv> {
+    // Try conda, mamba, micromamba in order
+    let bin = ["conda", "mamba", "micromamba"].iter().find(|&&b| which::which(b).is_ok());
+    
+    let bin = match bin {
+        Some(b) => b,
+        None => return vec![],
+    };
+
+    let output = Command::new(bin)
+        .args(&["env", "list", "--json"])
+        .output();
+
+    let output = match output {
+        Ok(o) => o,
+        Err(_) => return vec![],
+    };
+
+    if !output.status.success() {
+        return vec![];
+    }
+
+    let parsed: CondaEnvListOutput = match serde_json::from_slice(&output.stdout) {
+        Ok(p) => p,
+        Err(_) => return vec![],
+    };
+    
+    parsed.envs.into_iter().map(|path| {
+        let path_buf = std::path::PathBuf::from(&path);
+        let name = path_buf.file_name()
+            .map(|n| n.to_string_lossy().to_string());
+        
+        CondaEnv {
+            name,
+            prefix: path,
+        }
+    }).collect()
+}
 
 #[derive(Debug, Deserialize)]
 struct KernelSpec {
